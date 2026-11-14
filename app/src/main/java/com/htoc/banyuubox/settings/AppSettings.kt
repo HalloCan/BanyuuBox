@@ -1,0 +1,35 @@
+package com.htoc.banyuubox.settings
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+/**
+ * 应用设置的持久化存储。用 SharedPreferences 实现，改动会立刻生效并保存。
+ */
+object AppSettings {
+    private const val PREFS_NAME = "app_settings"
+    private const val KEY_THEME_MODE = "theme_mode"
+
+    private lateinit var prefs: SharedPreferences
+
+    /** 当前明暗模式，UI 直接观察这个状态即可自动刷新 */
+    val themeMode: MutableState<ThemeMode> = mutableStateOf(ThemeMode.SYSTEM)
+
+    /** 在 Activity onCreate 里调用一次 */
+    fun init(context: Context) {
+        prefs = context.applicationContext
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        themeMode.value = runCatching {
+            ThemeMode.valueOf(prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)!!)
+        }.getOrDefault(ThemeMode.SYSTEM)
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        themeMode.value = mode
+        prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
+    }
+}
