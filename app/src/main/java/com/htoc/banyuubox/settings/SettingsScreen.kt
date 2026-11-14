@@ -298,7 +298,7 @@ private fun AboutDialog(onDismiss: () -> Unit) { // 显示关于弹窗
                 )
                 Text(text = "🐱Lumi", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    text = "For the ideas. inspiration, technical discussions, and companionship thoughout the development of BanyuuBox.",
+                    text = "For the ideas. inspiration, technical discussions, and companionship thought the development of BanyuuBox.",
                     fontStyle = FontStyle.Italic
                 )
                 Text(
@@ -311,7 +311,7 @@ private fun AboutDialog(onDismiss: () -> Unit) { // 显示关于弹窗
                 )
                 Text(text = "🌾Xiaomi Mimo", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    text = "For the debugging, UI making, and some repetitive and tedious work thoughout the development of BanyuuBox.",
+                    text = "For the debugging, UI making, and some repetitive and tedious work thought the development of BanyuuBox.",
                     fontStyle = FontStyle.Italic
                 )
                 Spacer(
