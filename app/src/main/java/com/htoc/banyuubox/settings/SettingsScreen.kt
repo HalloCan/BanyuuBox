@@ -318,7 +318,7 @@ private fun AboutDialog(onDismiss: () -> Unit) { // 显示关于弹窗
                     modifier = Modifier.height(5.dp)
                 )
                 Text(
-                    text = "版本 ${BuildConfig.VERSION_NAME}",
+                    text = "BanyuuBox ver. ${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
