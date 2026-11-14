@@ -1,11 +1,20 @@
 package com.htoc.banyuubox.feature
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.CompareArrows
 import androidx.compose.material.icons.rounded.Cast
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.Lan
+import androidx.compose.material.icons.rounded.DeveloperMode
+import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Handyman
+import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.NetworkPing
+import androidx.compose.material.icons.rounded.Password
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -32,8 +41,8 @@ object FeatureCatalog {
 
     val sections: List<FeatureSection> = listOf(
         FeatureSection(
-            title = "局域网",
-            icon = Icons.Rounded.Lan,
+            title = "网络功能",
+            icon = Icons.Rounded.Wifi,
             items = listOf(
                 FeatureItem(
                     id = "lan_speed_test",
@@ -47,17 +56,71 @@ object FeatureCatalog {
                     description = "在局域网内实时传输与查看画面",
                     icon = Icons.Rounded.Cast,
                 ),
+                FeatureItem(
+                    id = "ping_traceroute",
+                    title = "Ping / Tracert",
+                    description = "测试连通性与延迟，跟踪路由路径",
+                    icon = Icons.Rounded.NetworkPing,
+                ),
+                FeatureItem(
+                    id = "dns_lookup",
+                    title = "DNS 查询",
+                    description = "查询域名的 DNS 解析记录",
+                    icon = Icons.Rounded.Dns,
+                ),
+                FeatureItem(
+                    id = "dns_optimize",
+                    title = "DNS 优选",
+                    description = "测速对比并挑选最优 DNS 服务器",
+                    icon = Icons.AutoMirrored.Rounded.CompareArrows,
+                ),
             ),
         ),
         FeatureSection(
             title = "实用工具",
-            icon = Icons.Rounded.Description,
+            icon = Icons.Rounded.Handyman,
             items = listOf(
                 FeatureItem(
                     id = "pdf_to_image",
                     title = "PDF 转图片",
                     description = "将 PDF 页面导出为图片文件",
                     icon = Icons.Rounded.PictureAsPdf,
+                ),
+                FeatureItem(
+                    id = "qr_tools",
+                    title = "QR 码生成/识别",
+                    description = "生成二维码，或识别图片中的二维码",
+                    icon = Icons.Rounded.QrCodeScanner,
+                ),
+                FeatureItem(
+                    id = "password_generator",
+                    title = "强密码生成器",
+                    description = "生成安全的随机强密码",
+                    icon = Icons.Rounded.Password,
+                ),
+            ),
+        ),
+        FeatureSection(
+            title = "硬件功能",
+            icon = Icons.Rounded.Memory,
+            items = listOf(
+                FeatureItem(
+                    id = "device_sensors",
+                    title = "传感器数据",
+                    description = "读取光照、加速度、陀螺仪等传感器数据",
+                    icon = Icons.Rounded.Sensors,
+                ),
+            ),
+        ),
+        FeatureSection(
+            title = "开发者功能",
+            icon = Icons.Rounded.DeveloperMode,
+            items = listOf(
+                FeatureItem(
+                    id = "markdown_preview",
+                    title = "Markdown 预览",
+                    description = "预览渲染 Markdown 文档",
+                    icon = Icons.Rounded.Visibility,
                 ),
             ),
         ),
