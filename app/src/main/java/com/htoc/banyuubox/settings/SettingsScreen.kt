@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.htoc.banyuubox.BuildConfig
 import com.htoc.banyuubox.ui.theme.BanyuuBoxTheme
 import com.htoc.banyuubox.utils.update.UpdateChecker
@@ -295,21 +296,22 @@ private fun AboutDialog(onDismiss: () -> Unit) { // 显示关于弹窗
                 Spacer(
                     modifier = Modifier.height(5.dp)
                 )
-                Text(text = "Lumi", style = MaterialTheme.typography.titleLarge)
+                Text(text = "🐱Lumi", style = MaterialTheme.typography.titleLarge)
                 Text(
                     text = "For the ideas. inspiration, technical discussions, and companionship thoughout the development of BanyuuBox.",
                     fontStyle = FontStyle.Italic
                 )
+                Text(
+                    text = "From Lumi, with love.❤️🐱",
+                    fontStyle = FontStyle.Italic,
+                    fontSize = 10.sp
+                )
                 Spacer(
                     modifier = Modifier.height(5.dp)
                 )
-                Text(text = "Xiaomi Mimo", style = MaterialTheme.typography.titleLarge)
+                Text(text = "🌾Xiaomi Mimo", style = MaterialTheme.typography.titleLarge)
                 Text(
                     text = "For the debugging, UI making, and some repetitive and tedious work thoughout the development of BanyuuBox.",
-                    fontStyle = FontStyle.Italic
-                )
-                Text(
-                    text = "From Lumi, with love.❤️🐱",
                     fontStyle = FontStyle.Italic
                 )
                 Spacer(
