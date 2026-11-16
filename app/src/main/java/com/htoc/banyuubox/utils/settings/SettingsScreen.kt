@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -31,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -65,9 +67,11 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showServerDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var checking by remember { mutableStateOf(false) }
     val themeMode by AppSettings.themeMode
+    val serverUrl by AppSettings.serverUrl
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -107,6 +111,16 @@ fun SettingsScreen(
                         title = "明暗模式",
                         value = themeMode.label,
                         onClick = { showThemeDialog = true },
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp, end = 20.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Cloud,
+                        title = "服务器地址",
+                        subtitle = serverUrl,
+                        onClick = { showServerDialog = true },
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 72.dp, end = 20.dp),
@@ -170,6 +184,16 @@ fun SettingsScreen(
             current = themeMode,
             onSelect = { AppSettings.setThemeMode(it) },
             onDismiss = { showThemeDialog = false },
+        )
+    }
+    if (showServerDialog) {
+        ServerUrlDialog(
+            current = serverUrl,
+            onSave = {
+                AppSettings.setServerUrl(it)
+                showServerDialog = false
+            },
+            onDismiss = { showServerDialog = false },
         )
     }
     if (showAboutDialog) {
@@ -275,6 +299,36 @@ private fun ThemeModeDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        },
+    )
+}
+
+@Composable
+private fun ServerUrlDialog(
+    current: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("服务器地址") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                supportingText = {
+                    Text("DNS 优选等功能请求的接口地址")
+                },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text.trim()) }) { Text("保存") }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) { Text("取消") }
         },
     )

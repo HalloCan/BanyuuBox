@@ -1,5 +1,9 @@
 pluginManagement {
     repositories {
+        // 国内镜像优先，下载失败时回退到官方源
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")

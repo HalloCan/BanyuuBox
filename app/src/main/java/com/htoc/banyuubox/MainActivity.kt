@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.htoc.banyuubox.home.HomeScreen
+import com.htoc.banyuubox.ui.pages.dns.DNSOptimizeScreen
 import com.htoc.banyuubox.ui.pages.pdf.PdfToImageScreen
 import com.htoc.banyuubox.utils.settings.AppSettings
 import com.htoc.banyuubox.utils.settings.SettingsScreen
@@ -24,6 +25,7 @@ sealed interface Screen {
     data object Home : Screen
     data object Settings : Screen
     data object PdfToImage : Screen
+    data object DNSOptimize : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -56,6 +58,7 @@ private fun AppNavHost() {
             onFeatureClick = { feature ->
                 when (feature.id) {
                     "pdf_to_image" -> screen = Screen.PdfToImage
+                    "dns_optimize" -> screen = Screen.DNSOptimize
                     // 其余功能页还没做，先弹提示。以后按 feature.id 加分支即可。
                     else -> Toast.makeText(context, "「${feature.title}」开发中", Toast.LENGTH_SHORT).show()
                 }
@@ -64,5 +67,6 @@ private fun AppNavHost() {
         )
         Screen.Settings -> SettingsScreen(onBack = { screen = Screen.Home })
         Screen.PdfToImage -> PdfToImageScreen(onBack = { screen = Screen.Home })
+        Screen.DNSOptimize -> DNSOptimizeScreen(onBack = { screen = Screen.Home } )
     }
 }
