@@ -321,7 +321,7 @@ private fun ServerUrlDialog(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 supportingText = {
-                    Text("DNS 优选等功能请求的接口地址")
+                    Text("服务器基地址，接口路径由程序自动拼接")
                 },
             )
         },

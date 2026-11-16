@@ -15,12 +15,16 @@ data class DnsServerInfo(
 )
 
 class GetDNSServersFromAPI {
-    // 服务端地址取自设置页「服务器地址」，也可在调用时传入 urlStr 覆盖
+    // 服务器基地址取自设置页「服务器地址」，接口路径由程序拼接
     val server: String get() = AppSettings.serverUrl.value
 
-    suspend fun fetchDnsServers(urlStr: String = server): List<DnsServerInfo> =
+    /** DNS 列表接口 = 基地址 + /dns-servers/ */
+    fun dnsServersUrl(baseUrl: String = server): String =
+        baseUrl.trimEnd('/') + "/dns-servers/"
+
+    suspend fun fetchDnsServers(baseUrl: String = server): List<DnsServerInfo> =
         withContext(Dispatchers.IO) {
-            val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+            val conn = (URL(dnsServersUrl(baseUrl)).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = 5000
                 readTimeout = 5000

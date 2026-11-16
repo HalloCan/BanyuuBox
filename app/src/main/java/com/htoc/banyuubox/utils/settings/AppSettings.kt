@@ -15,8 +15,8 @@ object AppSettings {
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_SERVER_URL = "server_url"
 
-    /** 服务器地址默认值，和原来写死的地址一致 */
-    const val DEFAULT_SERVER_URL = "http://192.168.5.9:23456/dns-servers/"
+    /** 服务器基地址默认值（接口路径由程序自动拼接） */
+    const val DEFAULT_SERVER_URL = "https://banyuu-box.htoc.top"
 
     private lateinit var prefs: SharedPreferences
 
