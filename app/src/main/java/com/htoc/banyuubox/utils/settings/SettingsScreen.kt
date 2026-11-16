@@ -1,5 +1,6 @@
-package com.htoc.banyuubox.settings
+package com.htoc.banyuubox.utils.settings
 
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -338,7 +339,7 @@ private fun SettingsScreenPreview() {
     }
 }
 
-@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun SettingsScreenDarkPreview() {
     BanyuuBoxTheme {

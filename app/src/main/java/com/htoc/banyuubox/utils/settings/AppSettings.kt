@@ -1,4 +1,4 @@
-package com.htoc.banyuubox.settings
+package com.htoc.banyuubox.utils.settings
 
 import android.content.Context
 import android.content.SharedPreferences

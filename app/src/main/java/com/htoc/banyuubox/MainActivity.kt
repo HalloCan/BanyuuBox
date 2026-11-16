@@ -14,10 +14,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.htoc.banyuubox.home.HomeScreen
-import com.htoc.banyuubox.pdf.PdfToImageScreen
-import com.htoc.banyuubox.settings.AppSettings
-import com.htoc.banyuubox.settings.SettingsScreen
-import com.htoc.banyuubox.settings.ThemeMode
+import com.htoc.banyuubox.ui.pages.pdf.PdfToImageScreen
+import com.htoc.banyuubox.utils.settings.AppSettings
+import com.htoc.banyuubox.utils.settings.SettingsScreen
+import com.htoc.banyuubox.utils.settings.ThemeMode
 import com.htoc.banyuubox.ui.theme.BanyuuBoxTheme
 
 sealed interface Screen {

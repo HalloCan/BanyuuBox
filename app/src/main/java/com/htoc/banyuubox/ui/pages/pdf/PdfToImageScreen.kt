@@ -1,14 +1,16 @@
-package com.htoc.banyuubox.pdf
+package com.htoc.banyuubox.ui.pages.pdf
 
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import java.io.File
 import android.net.Uri
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +22,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,17 +32,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,13 +62,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -80,6 +91,13 @@ data class PageImage(
     val bitmap: Bitmap,
 )
 
+/** 保存格式。quality 仅对 JPEG / WebP 有效，PNG 无损压缩会忽略它。 */
+enum class SaveFormat(val label: String, val compressFormat: Bitmap.CompressFormat) {
+    PNG("PNG", Bitmap.CompressFormat.PNG),
+    JPEG("JPEG", Bitmap.CompressFormat.JPEG),
+    WEBP("WebP", Bitmap.CompressFormat.WEBP_LOSSY),
+}
+
 private val CARD_WIDTH = 112.dp
 private val CARD_HEIGHT = 158.dp
 private val CARD_SPACING = 12.dp
@@ -89,6 +107,12 @@ fun PdfToImageScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var pages by remember { mutableStateOf<List<PageImage>>(emptyList()) } //默认预览界面为空
     var previewPage by remember { mutableStateOf<PageImage?>(null) }
+
+    // 保存属性
+    var saveFormat by remember { mutableStateOf(SaveFormat.PNG) }
+    var quality by remember { mutableStateOf(90) }
+    // 输出分辨率倍率（导入 PDF 时生效）
+    var scale by remember { mutableStateOf(2) }
 
     val scope = rememberCoroutineScope()
 
@@ -100,7 +124,7 @@ fun PdfToImageScreen(onBack: () -> Unit) {
         if (uri != null) {
             scope.launch {
                 // 渲染 PDF 比较重，放到 IO 线程；完了回主线程更新 UI
-                val bitmaps = withContext(Dispatchers.IO) { pdfLoader(context, uri) }
+                val bitmaps = withContext(Dispatchers.IO) { pdfLoader(context, uri, scale) }
                 pages = bitmaps?.mapIndexed { index, bmp ->
                     PageImage(id = index.toLong(), pageIndex = index + 1, bitmap = bmp)
                 } ?: emptyList()
@@ -115,11 +139,42 @@ fun PdfToImageScreen(onBack: () -> Unit) {
         actionEnabled = pages.isNotEmpty(),
         onAction = {
             pages.forEachIndexed { index, page ->
-                saveBitmapToGallery(context, page.bitmap, "pdf_page_${index + 1}")
+                saveBitmapToGallery(
+                    context, page.bitmap, "pdf_page_${index + 1}",
+                    saveFormat.compressFormat, quality,
+                )
             }
         },
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "输出分辨率", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.width(12.dp))
+                Slider(
+                    value = scale.toFloat(),
+                    onValueChange = { scale = it.toInt() },
+                    valueRange = 1f..5f,
+                    steps = 3,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "×$scale",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = "导入 PDF 时按此倍率渲染，每页图像为原始页面的 $scale 倍",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
             OutlinedButton(
                 onClick = {
                     pickPdf.launch(arrayOf("application/pdf"))
@@ -167,6 +222,14 @@ fun PdfToImageScreen(onBack: () -> Unit) {
                     onPageDelete = { target -> pages = pages.filterNot { it.id == target.id } },
                 )
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            SaveOptionsCard(
+                format = saveFormat,
+                onFormatChange = { saveFormat = it },
+                quality = quality,
+                onQualityChange = { quality = it },
+            )
         }
     }
 
@@ -178,6 +241,12 @@ fun PdfToImageScreen(onBack: () -> Unit) {
                 previewPage = null
             },
             onDismiss = { previewPage = null },
+            onSave = {
+                saveBitmapToGallery(
+                    context, page.bitmap, "pdf_image",
+                    saveFormat.compressFormat, quality,
+                )
+            },
         )
     }
 }
@@ -200,7 +269,7 @@ private fun PagePreviewRow(
     val currentPages by rememberUpdatedState(pages)
     val currentOnMove by rememberUpdatedState(onMove)
 
-    val itemWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+    val itemWidthPx = with(LocalDensity.current) {
         (CARD_WIDTH + CARD_SPACING).toPx()
     }
 
@@ -299,13 +368,90 @@ private fun PageCard(
     }
 }
 
+/**
+ * 保存属性设置卡片：图片格式 + 质量。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SaveOptionsCard(
+    format: SaveFormat,
+    onFormatChange: (SaveFormat) -> Unit,
+    quality: Int,
+    onQualityChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Text(
+                text = "保存设置",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(text = "图片格式", style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SaveFormat.entries.forEachIndexed { index, item ->
+                    SegmentedButton(
+                        selected = format == item,
+                        onClick = { onFormatChange(item) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = SaveFormat.entries.size,
+                        ),
+                    ) {
+                        Text(text = item.label)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                // PNG 无损，质量无意义，视觉上淡出提示
+                modifier = Modifier.alpha(if (format == SaveFormat.PNG) 0.4f else 1f),
+            ) {
+                Text(text = "质量", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.width(12.dp))
+                Slider(
+                    value = quality.toFloat(),
+                    onValueChange = { onQualityChange(it.toInt()) },
+                    valueRange = 1f..100f,
+                    enabled = format != SaveFormat.PNG,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "$quality",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (format == SaveFormat.PNG) {
+                Text(
+                    text = "PNG 为无损格式，不使用质量参数",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun PagePreviewDialog(
     page: PageImage,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
+    onSave: () -> Unit,
 ) {
-    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = "第 ${page.pageIndex} 页") },
@@ -319,7 +465,12 @@ private fun PagePreviewDialog(
                     colors = CardDefaults.cardColors(containerColor = page.placeholderColor()),
                     modifier = Modifier.size(width = 220.dp, height = 310.dp),
                 ) {
-
+                    Image(
+                        bitmap = page.bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -330,7 +481,7 @@ private fun PagePreviewDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { saveBitmapToGallery(context, page.bitmap, "pdf_image") }) { Text("保存本张") }
+            TextButton(onClick = onSave) { Text("保存本张") }
         },
         dismissButton = {
             TextButton(onClick = onDelete) {
@@ -356,10 +507,10 @@ private fun PdfToImageScreenPreview() {
     }
 }
 
-fun pdfLoader(context: Context, uri: Uri): ArrayList<Bitmap>? {
+fun pdfLoader(context: Context, uri: Uri, scale: Int): ArrayList<Bitmap>? {
     // 1.将pdf拷贝到应用缓存目录
     val file: File? = uriToFile(context, uri)
-    val bitmaps = renderPdfPageToBitmap(file)
+    val bitmaps = renderPdfPageToBitmap(file, scale)
     Log.d("PdfToImageScreen", "Bitmaps length:" + bitmaps?.size)
     return bitmaps
 }
@@ -392,7 +543,7 @@ fun getFileNameFromUri(context: Context, uri: Uri): String? {
     val cursor = context.contentResolver.query(uri, null, null, null, null)
     cursor?.use {
         if (it.moveToFirst()) {
-            val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (nameIndex != -1) {
                 return it.getString(nameIndex)
             }
@@ -404,7 +555,7 @@ fun getFileNameFromUri(context: Context, uri: Uri): String? {
 
 // 将某一页pdf转换为bitmap
 // 1. 在后台线程（如 Coroutine 的 Dispatchers.IO）中执行
-fun renderPdfPageToBitmap(pdfFile: File?): ArrayList<Bitmap>? {
+fun renderPdfPageToBitmap(pdfFile: File?, scale: Int = 1): ArrayList<Bitmap>? {
     var fileDescriptor: ParcelFileDescriptor? = null
     var renderer: PdfRenderer? = null
     var page: PdfRenderer.Page? = null
@@ -424,14 +575,15 @@ fun renderPdfPageToBitmap(pdfFile: File?): ArrayList<Bitmap>? {
         repeat(pageCount){ index ->
             page = renderer.openPage(index)
 
-            // 6. 创建与页面尺寸一致的空白 Bitmap。使用 ARGB_8888 以获得较好质量
-            val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+            // 6. 创建空白 Bitmap，尺寸 = 原始页面尺寸 × scale（输出分辨率倍率）
+            val bitmap = Bitmap.createBitmap(page.width * scale, page.height * scale, Bitmap.Config.ARGB_8888)
 
             // 7. 将 Bitmap 背景填充为白色。PDF 背景可能是透明的，不填充会得到黑色背景
             bitmap.eraseColor(Color.WHITE)
 
-            // 8. 执行渲染。RENDER_MODE_FOR_DISPLAY 适用于屏幕显示[citation:4][citation:6]
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            // 8. 执行渲染。transform 把 PDF 页面坐标缩放到放大后的画布上
+            val matrix = Matrix().apply { postScale(scale.toFloat(), scale.toFloat()) }
+            page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
             // 9.存数组
             bitmaps.add(bitmap)
@@ -454,10 +606,26 @@ fun renderPdfPageToBitmap(pdfFile: File?): ArrayList<Bitmap>? {
     }
 }
 
-fun saveBitmapToGallery(context: Context, bitmap: Bitmap, displayName: String) {
+fun saveBitmapToGallery(
+    context: Context,
+    bitmap: Bitmap,
+    displayName: String,
+    format: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG,
+    quality: Int = 100,
+) {
+    val extension = when (format) {
+        Bitmap.CompressFormat.JPEG -> "jpg"
+        Bitmap.CompressFormat.WEBP_LOSSY, Bitmap.CompressFormat.WEBP_LOSSLESS -> "webp"
+        else -> "png"
+    }
+    val mimeType = when (format) {
+        Bitmap.CompressFormat.JPEG -> "image/jpeg"
+        Bitmap.CompressFormat.WEBP_LOSSY, Bitmap.CompressFormat.WEBP_LOSSLESS -> "image/webp"
+        else -> "image/png"
+    }
     val values = ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.png")
-        put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+        put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.$extension")
+        put(MediaStore.Images.Media.MIME_TYPE, mimeType)
         put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BanyuuBox")  // 相册里的目录
         put(MediaStore.Images.Media.IS_PENDING, 1)  // 写完前先不让别的 App 看到
     }
@@ -466,7 +634,7 @@ fun saveBitmapToGallery(context: Context, bitmap: Bitmap, displayName: String) {
         ?: return
 
     context.contentResolver.openOutputStream(uri)?.use { out ->
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        bitmap.compress(format, quality, out)
     }
 
     values.clear()

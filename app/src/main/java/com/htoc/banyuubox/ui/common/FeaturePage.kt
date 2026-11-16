@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
  * 通用功能页骨架：顶部标题栏（带返回）+ 内容区 + 底部主操作按钮。
  *
  * 新建功能页时直接复用它，把页面内容写在 [content] 里即可。
- * 参考用法见 [com.htoc.banyuubox.pdf.PdfToImageScreen]：
+ * 参考用法见 [com.htoc.banyuubox.ui.pages.pdf.PdfToImageScreen]：
  *
  * ```
  * FeaturePageScaffold(
