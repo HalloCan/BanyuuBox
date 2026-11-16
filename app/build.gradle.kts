@@ -14,8 +14,8 @@ android {
         applicationId = "com.htoc.banyuubox"
         minSdk = 31
         targetSdk = 37
-        versionCode = 2
-        versionName = "alpha_v0.2.1"
+        versionCode = 3
+        versionName = "alpha_v0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
