@@ -53,7 +53,10 @@ private fun AppNavHost() {
         Screen.Home -> HomeScreen(
             onFeatureClick = { feature ->
                 // 各功能页还没做，先弹提示。以后按 feature.id 跳转到对应页面。
-                Toast.makeText(context, "「${feature.title}」开发中", Toast.LENGTH_SHORT).show()
+                when(feature.id){
+                    "pdf_to_image" -> Toast.makeText(context, "PDF", Toast.LENGTH_SHORT).show()
+                    else -> Toast.makeText(context, "「${feature.title}」开发中", Toast.LENGTH_SHORT).show()
+                }
             },
             onSettingsClick = { screen = Screen.Settings },
         )
