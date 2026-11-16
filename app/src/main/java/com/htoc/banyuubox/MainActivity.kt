@@ -60,7 +60,6 @@ private fun AppNavHost() {
             },
             onSettingsClick = { screen = Screen.Settings },
         )
-
         Screen.Settings -> SettingsScreen(onBack = { screen = Screen.Home })
     }
 }
