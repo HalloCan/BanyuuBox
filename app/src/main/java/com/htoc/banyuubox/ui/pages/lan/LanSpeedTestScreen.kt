@@ -1,6 +1,11 @@
 package com.htoc.banyuubox.ui.pages.lan
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.htoc.banyuubox.ui.common.FeaturePageScaffold
 import com.htoc.banyuubox.utils.lan.DeviceDiscovery
 import com.htoc.banyuubox.utils.lan.IperfResult
@@ -107,9 +114,19 @@ fun LanSpeedTestScreen(onBack: () -> Unit) {
         }
     }
 
-    // 启动信令监听 + 设备发现；离开页面时关闭
-    DisposableEffect(Unit) {
-        val server = SignalingServer(
+    // 本地网络权限：Android 16 (API 37) 起，NSD 发现 / 局域网互连都需要先授权
+    var hasLocalNetworkPermission by remember {
+        mutableStateOf(checkLocalNetworkPermission(context))
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasLocalNetworkPermission = granted
+        if (!granted) status = "未授予本地网络权限，无法发现设备"
+    }
+
+    val server = remember {
+        SignalingServer(
             myName = deviceName,
             onRequest = { peerName ->
                 suspendCancellableCoroutine { cont ->
@@ -122,9 +139,18 @@ fun LanSpeedTestScreen(onBack: () -> Unit) {
             onPlan = { p -> runTest(p) },
             onError = { msg -> errorText = msg },
         )
-        val port = server.start()
-        discovery.start(deviceName, port)
-        status = "正在搜索同局域网设备…"
+    }
+
+    // 获得权限后启动信令监听 + 设备发现
+    LaunchedEffect(hasLocalNetworkPermission) {
+        if (hasLocalNetworkPermission) {
+            val port = server.start()
+            discovery.start(deviceName, port)
+            status = "正在搜索同局域网设备…"
+        }
+    }
+
+    DisposableEffect(Unit) {
         onDispose {
             server.stop()
             discovery.stop()
@@ -170,6 +196,37 @@ fun LanSpeedTestScreen(onBack: () -> Unit) {
                     if (busy) {
                         Spacer(modifier = Modifier.width(12.dp))
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    }
+                }
+            }
+
+            // 权限未授予时显示授权卡片
+            if (!hasLocalNetworkPermission) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "需要「本地网络」权限",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = "Android 16 起，搜索局域网设备需要授予本地网络权限。",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                permissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                            },
+                        ) {
+                            Text(text = "授予权限")
+                        }
                     }
                 }
             }
@@ -332,6 +389,15 @@ private fun formatBandwidth(bps: Double): String = when {
     bps >= 1e6 -> "%.2f Mbps".format(bps / 1e6)
     bps >= 1e3 -> "%.2f kbps".format(bps / 1e3)
     else -> "%.0f bps".format(bps)
+}
+
+/** ACCESS_LOCAL_NETWORK 自 API 37 起才存在，旧系统直接放行。 */
+private fun checkLocalNetworkPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < 37) return true
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_LOCAL_NETWORK,
+    ) == PackageManager.PERMISSION_GRANTED
 }
 
 private fun formatBytes(bytes: Double): String = when {
