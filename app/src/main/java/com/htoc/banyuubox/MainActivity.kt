@@ -18,6 +18,7 @@ import com.htoc.banyuubox.ui.pages.dns.DNSOptimizeScreen
 import com.htoc.banyuubox.ui.pages.lan.LanSpeedTestScreen
 import com.htoc.banyuubox.ui.pages.pdf.PdfToImageScreen
 import com.htoc.banyuubox.utils.settings.AppSettings
+import com.htoc.banyuubox.utils.settings.OpenSourceLicensesScreen
 import com.htoc.banyuubox.utils.settings.SettingsScreen
 import com.htoc.banyuubox.utils.settings.ThemeMode
 import com.htoc.banyuubox.ui.theme.BanyuuBoxTheme
@@ -28,6 +29,7 @@ sealed interface Screen {
     data object PdfToImage : Screen
     data object DNSOptimize : Screen
     data object LanSpeedTest : Screen
+    data object OpenSourceLicenses : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -68,7 +70,11 @@ private fun AppNavHost() {
             },
             onSettingsClick = { screen = Screen.Settings },
         )
-        Screen.Settings -> SettingsScreen(onBack = { screen = Screen.Home })
+        Screen.Settings -> SettingsScreen(
+            onBack = { screen = Screen.Home },
+            onOpenSourceLicenses = { screen = Screen.OpenSourceLicenses },
+        )
+        Screen.OpenSourceLicenses -> OpenSourceLicensesScreen(onBack = { screen = Screen.Home })
         Screen.PdfToImage -> PdfToImageScreen(onBack = { screen = Screen.Home })
         Screen.DNSOptimize -> DNSOptimizeScreen(onBack = { screen = Screen.Home } )
         Screen.LanSpeedTest -> LanSpeedTestScreen(onBack = { screen = Screen.Home })

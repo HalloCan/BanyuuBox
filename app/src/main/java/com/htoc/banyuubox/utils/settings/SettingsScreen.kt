@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Copyright
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -63,6 +64,7 @@ import com.htoc.banyuubox.utils.update.UpdateChecker
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onOpenSourceLicenses: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -152,6 +154,15 @@ fun SettingsScreen(
                                 }
                             }
                         },
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp, end = 20.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                    SettingsRow(
+                        icon = Icons.Rounded.Copyright,
+                        title = "开放源代码许可",
+                        onClick = onOpenSourceLicenses,
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 72.dp, end = 20.dp),
@@ -389,7 +400,7 @@ private fun AboutDialog(onDismiss: () -> Unit) { // 显示关于弹窗
 @Composable
 private fun SettingsScreenPreview() {
     BanyuuBoxTheme {
-        SettingsScreen(onBack = {})
+        SettingsScreen(onBack = {}, onOpenSourceLicenses = {})
     }
 }
 
@@ -397,6 +408,6 @@ private fun SettingsScreenPreview() {
 @Composable
 private fun SettingsScreenDarkPreview() {
     BanyuuBoxTheme {
-        SettingsScreen(onBack = {})
+        SettingsScreen(onBack = {}, onOpenSourceLicenses = {})
     }
 }
