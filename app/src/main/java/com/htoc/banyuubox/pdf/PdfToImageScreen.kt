@@ -1,5 +1,6 @@
 package com.htoc.banyuubox.pdf
 
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -7,10 +8,12 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import java.io.File
 import android.net.Uri
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -44,13 +47,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,6 +64,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.htoc.banyuubox.ui.common.FeaturePageScaffold
 import com.htoc.banyuubox.ui.theme.BanyuuBoxTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 预览中的一页图片。
@@ -68,6 +77,7 @@ import com.htoc.banyuubox.ui.theme.BanyuuBoxTheme
 data class PageImage(
     val id: Long,
     val pageIndex: Int,
+    val bitmap: Bitmap,
 )
 
 private val CARD_WIDTH = 112.dp
@@ -77,10 +87,10 @@ private val CARD_SPACING = 12.dp
 @Composable
 fun PdfToImageScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var pages by remember {
-        mutableStateOf(List(5) { i -> PageImage(id = i.toLong(), pageIndex = i + 1) })
-    }
+    var pages by remember { mutableStateOf<List<PageImage>>(emptyList()) } //默认预览界面为空
     var previewPage by remember { mutableStateOf<PageImage?>(null) }
+
+    val scope = rememberCoroutineScope()
 
     // 注册启动器
     val pickPdf = rememberLauncherForActivityResult(
@@ -88,7 +98,13 @@ fun PdfToImageScreen(onBack: () -> Unit) {
     ) { uri: Uri? ->
         // 用户选完文件后回到这里；取消选择时 uri 为 null
         if (uri != null) {
-            pdfLoader(context, uri)
+            scope.launch {
+                // 渲染 PDF 比较重，放到 IO 线程；完了回主线程更新 UI
+                val bitmaps = withContext(Dispatchers.IO) { pdfLoader(context, uri) }
+                pages = bitmaps?.mapIndexed { index, bmp ->
+                    PageImage(id = index.toLong(), pageIndex = index + 1, bitmap = bmp)
+                } ?: emptyList()
+            }
         }
     }
 
@@ -97,7 +113,11 @@ fun PdfToImageScreen(onBack: () -> Unit) {
         onBack = onBack,
         actionLabel = "保存图片",
         actionEnabled = pages.isNotEmpty(),
-        onAction = { /* TODO: 保存导出的图片 */ },
+        onAction = {
+            pages.forEachIndexed { index, page ->
+                saveBitmapToGallery(context, page.bitmap, "pdf_page_${index + 1}")
+            }
+        },
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             OutlinedButton(
@@ -252,14 +272,12 @@ private fun PageCard(
                 .fillMaxSize()
                 .clickable(onClick = onClick),
         ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "第 ${page.pageIndex} 页",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
+            Image(
+                bitmap = page.bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
         Box(
             modifier = Modifier
@@ -287,6 +305,7 @@ private fun PagePreviewDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = "第 ${page.pageIndex} 页") },
@@ -295,19 +314,12 @@ private fun PagePreviewDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // TODO: 接入真实图片后，把这里换成 Image(bitmap = ...)
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = page.placeholderColor()),
                     modifier = Modifier.size(width = 220.dp, height = 310.dp),
                 ) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "图片预览",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
+
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -318,7 +330,7 @@ private fun PagePreviewDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            TextButton(onClick = { saveBitmapToGallery(context, page.bitmap, "pdf_image") }) { Text("保存本张") }
         },
         dismissButton = {
             TextButton(onClick = onDelete) {
@@ -344,12 +356,12 @@ private fun PdfToImageScreenPreview() {
     }
 }
 
-fun pdfLoader(context: Context, uri: Uri){
+fun pdfLoader(context: Context, uri: Uri): ArrayList<Bitmap>? {
     // 1.将pdf拷贝到应用缓存目录
     val file: File? = uriToFile(context, uri)
     val bitmaps = renderPdfPageToBitmap(file)
     Log.d("PdfToImageScreen", "Bitmaps length:" + bitmaps?.size)
-    // 将这些bitmaps绘制在UI上
+    return bitmaps
 }
 
 fun uriToFile(context: Context, uri: Uri): File? {
@@ -439,4 +451,25 @@ fun renderPdfPageToBitmap(pdfFile: File?): ArrayList<Bitmap>? {
             fileDescriptor?.close()
         }
     }
+}
+
+fun saveBitmapToGallery(context: Context, bitmap: Bitmap, displayName: String) {
+    val values = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.png")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BanyuuBox")  // 相册里的目录
+        put(MediaStore.Images.Media.IS_PENDING, 1)  // 写完前先不让别的 App 看到
+    }
+    val uri = context.contentResolver
+        .insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        ?: return
+
+    context.contentResolver.openOutputStream(uri)?.use { out ->
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+    }
+
+    values.clear()
+    values.put(MediaStore.Images.Media.IS_PENDING, 0)  // 写完了，对相册可见
+    Toast.makeText(context, "保存成功！", Toast.LENGTH_SHORT).show()
+    context.contentResolver.update(uri, values, null, null)
 }
