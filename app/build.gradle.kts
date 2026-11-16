@@ -14,18 +14,23 @@ android {
         applicationId = "com.htoc.banyuubox"
         minSdk = 31
         targetSdk = 37
-        versionCode = 1
-        versionName = "alpha_v0.2"
+        versionCode = 2
+        versionName = "alpha_v0.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
-            }
+            // 用经典 R8 压缩 + 资源收缩控制包体积。
+            // 不要用模板里的 optimization { packageScope = setOf("kotlin.**", ...) }：
+            // 它会混淆 kotlin 标准库内部类，导致 release 包启动即崩（IllegalAccessError）。
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
     compileOptions {
