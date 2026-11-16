@@ -1,11 +1,17 @@
 package com.htoc.banyuubox.pdf
 
 import android.content.Context
-import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
+import java.io.File
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -71,13 +77,13 @@ private val CARD_SPACING = 12.dp
 
 @Composable
 fun PdfToImageScreen(onBack: () -> Unit) {
-    // TODO: 这是示例数据，接入真实 PDF 转换逻辑后替换为转换结果
     val context = LocalContext.current
     var pages by remember {
         mutableStateOf(List(5) { i -> PageImage(id = i.toLong(), pageIndex = i + 1) })
     }
     var previewPage by remember { mutableStateOf<PageImage?>(null) }
 
+    // 注册启动器
     val pickPdf = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
@@ -336,5 +342,91 @@ private fun PageImage.placeholderColor() =
 private fun PdfToImageScreenPreview() {
     BanyuuBoxTheme {
         PdfToImageScreen(onBack = {})
+    }
+}
+
+fun pdfLoader(context: Context, uri: Uri){
+    // 1.将pdf拷贝到应用缓存目录
+    val file: File? = uriToFile(context, uri)
+}
+
+fun uriToFile(context: Context, uri: Uri): File? {
+    return try {
+        // 1. 打开输入流
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+
+        // 2. 在应用私有目录下创建目标文件
+        // 这里使用应用缓存目录
+        val fileName = getFileNameFromUri(context, uri) ?: "temp_${System.currentTimeMillis()}"
+        val targetFile = File(context.cacheDir, fileName)
+
+        // 3. 将输入流复制到目标文件
+        targetFile.outputStream().use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+        inputStream.close()
+
+        targetFile
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+// 辅助方法：尝试从 URI 获取原始文件名
+fun getFileNameFromUri(context: Context, uri: Uri): String? {
+    val cursor = context.contentResolver.query(uri, null, null, null, null)
+    cursor?.use {
+        if (it.moveToFirst()) {
+            val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (nameIndex != -1) {
+                return it.getString(nameIndex)
+            }
+        }
+    }
+    return null
+}
+
+
+// 将某一页pdf转换为bitmap
+// 1. 在后台线程（如 Coroutine 的 Dispatchers.IO）中执行
+fun renderPdfPageToBitmap(pdfFile: File, pageIndex: Int): Bitmap? {
+    var fileDescriptor: ParcelFileDescriptor? = null
+    var renderer: PdfRenderer? = null
+    var page: PdfRenderer.Page? = null
+
+    return try {
+        // 2. 以只读方式打开文件，获取可随机访问的描述符
+        fileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+
+        // 3. 创建 PdfRenderer。注意：构造过程可能耗时，必须在后台线程进行[citation:1][citation:2]
+        renderer = PdfRenderer(fileDescriptor)
+
+        // 4. 打开指定页面（索引从 0 开始）
+        page = renderer.openPage(pageIndex)
+
+        // 5. 创建与页面尺寸一致的空白 Bitmap。使用 ARGB_8888 以获得较好质量
+        val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+
+        // 6. 将 Bitmap 背景填充为白色。PDF 背景可能是透明的，不填充会得到黑色背景
+        bitmap.eraseColor(Color.WHITE)
+
+        // 7. 执行渲染。RENDER_MODE_FOR_DISPLAY 适用于屏幕显示[citation:4][citation:6]
+        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+        // return此bitmap，需要自己循环调用
+        bitmap
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    } finally {
+        // 8. 严格按顺序关闭资源：先关 Page，再关 Renderer，最后关文件描述符
+        // 注意：关闭 Renderer 时，它会自动接管并关闭传入的 fileDescriptor[citation:1]
+        page?.close()
+        renderer?.close()
+        // 如果 renderer 创建失败，才需要手动关闭 fileDescriptor
+        if (renderer == null) {
+            fileDescriptor?.close()
+        }
     }
 }
