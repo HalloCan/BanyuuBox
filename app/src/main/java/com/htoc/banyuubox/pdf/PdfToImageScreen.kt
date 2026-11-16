@@ -436,6 +436,7 @@ fun renderPdfPageToBitmap(pdfFile: File?): ArrayList<Bitmap>? {
             // 9.存数组
             bitmaps.add(bitmap)
         }
+        pdfFile?.delete()
         // return此bitmap array
         bitmaps
     } catch (e: Exception) {
