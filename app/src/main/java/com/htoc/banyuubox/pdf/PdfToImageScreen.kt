@@ -7,11 +7,10 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import java.io.File
 import android.net.Uri
-import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -89,7 +88,7 @@ fun PdfToImageScreen(onBack: () -> Unit) {
     ) { uri: Uri? ->
         // 用户选完文件后回到这里；取消选择时 uri 为 null
         if (uri != null) {
-            Toast.makeText(context, uri.toString(), Toast.LENGTH_SHORT).show()
+            pdfLoader(context, uri)
         }
     }
 
@@ -348,6 +347,9 @@ private fun PdfToImageScreenPreview() {
 fun pdfLoader(context: Context, uri: Uri){
     // 1.将pdf拷贝到应用缓存目录
     val file: File? = uriToFile(context, uri)
+    val bitmaps = renderPdfPageToBitmap(file)
+    Log.d("PdfToImageScreen", "Bitmaps length:" + bitmaps?.size)
+    // 将这些bitmaps绘制在UI上
 }
 
 fun uriToFile(context: Context, uri: Uri): File? {
@@ -390,7 +392,7 @@ fun getFileNameFromUri(context: Context, uri: Uri): String? {
 
 // 将某一页pdf转换为bitmap
 // 1. 在后台线程（如 Coroutine 的 Dispatchers.IO）中执行
-fun renderPdfPageToBitmap(pdfFile: File, pageIndex: Int): Bitmap? {
+fun renderPdfPageToBitmap(pdfFile: File?): ArrayList<Bitmap>? {
     var fileDescriptor: ParcelFileDescriptor? = null
     var renderer: PdfRenderer? = null
     var page: PdfRenderer.Page? = null
@@ -402,20 +404,28 @@ fun renderPdfPageToBitmap(pdfFile: File, pageIndex: Int): Bitmap? {
         // 3. 创建 PdfRenderer。注意：构造过程可能耗时，必须在后台线程进行[citation:1][citation:2]
         renderer = PdfRenderer(fileDescriptor)
 
-        // 4. 打开指定页面（索引从 0 开始）
-        page = renderer.openPage(pageIndex)
+        // 4.创建一个包含所有bitmap的列表
+        val pageCount = renderer.getPageCount()
+        val bitmaps = ArrayList<Bitmap>(pageCount)
 
-        // 5. 创建与页面尺寸一致的空白 Bitmap。使用 ARGB_8888 以获得较好质量
-        val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+        // 5. 循环所有页面（索引从开始）
+        repeat(pageCount){ index ->
+            page = renderer.openPage(index)
 
-        // 6. 将 Bitmap 背景填充为白色。PDF 背景可能是透明的，不填充会得到黑色背景
-        bitmap.eraseColor(Color.WHITE)
+            // 6. 创建与页面尺寸一致的空白 Bitmap。使用 ARGB_8888 以获得较好质量
+            val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
 
-        // 7. 执行渲染。RENDER_MODE_FOR_DISPLAY 适用于屏幕显示[citation:4][citation:6]
-        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            // 7. 将 Bitmap 背景填充为白色。PDF 背景可能是透明的，不填充会得到黑色背景
+            bitmap.eraseColor(Color.WHITE)
 
-        // return此bitmap，需要自己循环调用
-        bitmap
+            // 8. 执行渲染。RENDER_MODE_FOR_DISPLAY 适用于屏幕显示[citation:4][citation:6]
+            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+            // 9.存数组
+            bitmaps.add(bitmap)
+        }
+        // return此bitmap array
+        bitmaps
     } catch (e: Exception) {
         e.printStackTrace()
         null
