@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.htoc.banyuubox.home.HomeScreen
+import com.htoc.banyuubox.pdf.PdfToImageScreen
 import com.htoc.banyuubox.settings.AppSettings
 import com.htoc.banyuubox.settings.SettingsScreen
 import com.htoc.banyuubox.settings.ThemeMode
@@ -22,6 +23,7 @@ import com.htoc.banyuubox.ui.theme.BanyuuBoxTheme
 sealed interface Screen {
     data object Home : Screen
     data object Settings : Screen
+    data object PdfToImage : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -52,14 +54,15 @@ private fun AppNavHost() {
     when (screen) {
         Screen.Home -> HomeScreen(
             onFeatureClick = { feature ->
-                // 各功能页还没做，先弹提示。以后按 feature.id 跳转到对应页面。
-                when(feature.id){
-                    "pdf_to_image" -> Toast.makeText(context, "PDF", Toast.LENGTH_SHORT).show()
+                when (feature.id) {
+                    "pdf_to_image" -> screen = Screen.PdfToImage
+                    // 其余功能页还没做，先弹提示。以后按 feature.id 加分支即可。
                     else -> Toast.makeText(context, "「${feature.title}」开发中", Toast.LENGTH_SHORT).show()
                 }
             },
             onSettingsClick = { screen = Screen.Settings },
         )
         Screen.Settings -> SettingsScreen(onBack = { screen = Screen.Home })
+        Screen.PdfToImage -> PdfToImageScreen(onBack = { screen = Screen.Home })
     }
 }
