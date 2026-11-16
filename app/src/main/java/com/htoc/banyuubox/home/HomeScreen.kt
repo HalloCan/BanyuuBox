@@ -109,7 +109,7 @@ private fun AppIcon(size: Dp, modifier: Modifier = Modifier) {
         modifier = modifier
             .size(size)
             .clip(RoundedCornerShape(size * 0.22f))
-            .background(Color(0xFF3DDC84)),
+            .background(Color(0xFF303F9F)),
         contentAlignment = Alignment.Center,
     ) {
         // 自适应图标前景是 108dp 画布、72dp 安全区，放大 1.5 倍后裁切即与桌面图标一致
