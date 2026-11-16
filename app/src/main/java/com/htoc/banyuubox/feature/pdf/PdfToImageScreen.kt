@@ -1,4 +1,4 @@
-package com.htoc.banyuubox.ui.pages.pdf
+package com.htoc.banyuubox.feature.pdf
 
 import android.content.ContentValues
 import android.content.Context

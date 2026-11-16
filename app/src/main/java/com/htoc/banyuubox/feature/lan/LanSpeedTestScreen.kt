@@ -1,4 +1,4 @@
-package com.htoc.banyuubox.ui.pages.lan
+package com.htoc.banyuubox.feature.lan
 
 import android.Manifest
 import android.content.Context

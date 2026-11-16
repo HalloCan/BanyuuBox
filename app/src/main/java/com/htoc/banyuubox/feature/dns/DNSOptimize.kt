@@ -1,4 +1,4 @@
-package com.htoc.banyuubox.ui.pages.dns
+package com.htoc.banyuubox.feature.dns
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -53,7 +53,6 @@ import com.htoc.banyuubox.data.DnsServerDao
 import com.htoc.banyuubox.data.DnsSpeedTester
 import com.htoc.banyuubox.ui.common.FeaturePageScaffold
 import com.htoc.banyuubox.ui.theme.BanyuuBoxTheme
-import com.htoc.banyuubox.utils.settings.SettingsScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest

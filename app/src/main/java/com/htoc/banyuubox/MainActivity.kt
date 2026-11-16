@@ -14,9 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.htoc.banyuubox.home.HomeScreen
-import com.htoc.banyuubox.ui.pages.dns.DNSOptimizeScreen
-import com.htoc.banyuubox.ui.pages.lan.LanSpeedTestScreen
-import com.htoc.banyuubox.ui.pages.pdf.PdfToImageScreen
+import com.htoc.banyuubox.feature.dns.DNSOptimizeScreen
+import com.htoc.banyuubox.feature.lan.LanSpeedTestScreen
+import com.htoc.banyuubox.feature.pdf.PdfToImageScreen
 import com.htoc.banyuubox.utils.settings.AppSettings
 import com.htoc.banyuubox.utils.settings.OpenSourceLicensesScreen
 import com.htoc.banyuubox.utils.settings.SettingsScreen
