@@ -11,7 +11,8 @@ API=31
 TRIPLE=aarch64-linux-android
 HOST_TAG=darwin-x86_64
 TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/$HOST_TAG"
-OUT_DIR="$(cd "$(dirname "$0")/.." && pwd)/app/src/main/assets/iperf3/arm64-v8a"
+# 产物必须命名成 lib*.so 打进 jniLibs（安装后释放到 nativeLibraryDir，应用内可执行）
+OUT_DIR="$(cd "$(dirname "$0")/.." && pwd)/app/src/main/jniLibs/arm64-v8a"
 
 [ -d "$SRC_DIR" ] || { echo "找不到 iperf 源码目录: $SRC_DIR"; exit 1; }
 [ -d "$TOOLCHAIN" ] || { echo "找不到 NDK 工具链: $TOOLCHAIN"; exit 1; }
@@ -37,7 +38,7 @@ export STRIP="$TOOLCHAIN/bin/llvm-strip"
 make -j"$(sysctl -n hw.ncpu)" -C src iperf3 >make.log
 
 mkdir -p "$OUT_DIR"
-cp src/iperf3 "$OUT_DIR/iperf3"
-"$TOOLCHAIN/bin/llvm-strip" "$OUT_DIR/iperf3"
-echo "完成: $OUT_DIR/iperf3"
-file "$OUT_DIR/iperf3"
+cp src/iperf3 "$OUT_DIR/libiperf3.so"
+"$TOOLCHAIN/bin/llvm-strip" "$OUT_DIR/libiperf3.so"
+echo "完成: $OUT_DIR/libiperf3.so"
+file "$OUT_DIR/libiperf3.so"

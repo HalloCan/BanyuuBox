@@ -41,6 +41,14 @@ android {
         compose = true
         buildConfig = true
     }
+    packaging {
+        jniLibs {
+            // 让安装器把 jniLibs 释放到 nativeLibraryDir：
+            // Android 10+ 禁止执行应用数据目录（filesDir）里的文件（error=13），
+            // 只有 nativeLibraryDir 里的可执行文件能直接运行。
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {

@@ -23,7 +23,7 @@ data class IperfResult(
 )
 
 /**
- * iperf3 执行器：从 assets 释放原生二进制到应用私有目录后直接执行。
+ * iperf3 执行器：直接运行安装时释放到 nativeLibraryDir 的原生二进制（libiperf3.so）。
  *
  * 命令等价于桌面版 iperf3：
  *  - 服务端: iperf3 -s -1 -p <port> -J   （-1 = 只接受一次测试后退出）
@@ -35,18 +35,22 @@ object IperfRunner {
     private const val TEST_SECONDS = 10
     private const val TIMEOUT_MS = 90_000L
 
-    /** 把 assets/iperf3/<abi>/iperf3 释放到 filesDir，返回可执行文件。 */
-    fun prepareBinary(context: Context): File {
-        val abi = Build.SUPPORTED_ABIS.firstOrNull { SUPPORTED_ABIS.contains(it) }
-            ?: error("当前设备架构暂不支持（可用 ABI: ${Build.SUPPORTED_ABIS.joinToString()}）")
-        val target = File(context.filesDir, "iperf3")
-        if (!target.exists() || target.length() == 0L) {
-            context.assets.open("iperf3/$abi/iperf3").use { input ->
-                target.outputStream().use { input.copyTo(it) }
-            }
-            target.setExecutable(true, false)
+    /**
+     * 返回 iperf3 可执行文件。
+     *
+     * 二进制作为原生库（libiperf3.so）随 APK 打包，安装时由系统释放到
+     * nativeLibraryDir。注意不能放到 filesDir 再执行：
+     * Android 10+ 禁止执行应用数据目录里由应用自己写入的文件（error=13）。
+     */
+    fun binaryFile(context: Context): File {
+        val file = File(context.applicationInfo.nativeLibraryDir, "libiperf3.so")
+        if (!file.exists()) {
+            error(
+                "未找到 iperf3 二进制：设备 ABI（${Build.SUPPORTED_ABIS.joinToString()}）" +
+                    "与打包架构（arm64-v8a）不匹配"
+            )
         }
-        return target
+        return file
     }
 
     /** 启动 iperf3 服务端，等一个客户端完成一次测试后返回结果。 */
@@ -75,7 +79,7 @@ object IperfRunner {
         role: IperfRole,
     ): Result<IperfResult> = withContext(Dispatchers.IO) {
         runCatching {
-            val bin = prepareBinary(context)
+            val bin = binaryFile(context)
             Log.d(TAG, "执行: ${bin.absolutePath} ${args.joinToString(" ")}")
             val (exitCode, stdout, stderr) = exec(listOf(bin.absolutePath) + args)
             if (exitCode != 0) {
@@ -117,6 +121,4 @@ object IperfRunner {
             raw = stdout,
         )
     }
-
-    private val SUPPORTED_ABIS = setOf("arm64-v8a", "armeabi-v7a", "x86_64")
 }
